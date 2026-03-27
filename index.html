@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ヴェネツィア総督選挙</title>
+<style>
+:root {
+  --gold: #c9a84c;
+  --gold-dark: #8b6914;
+  --crimson: #8b1a1a;
+  --navy: #1a2744;
+  --navy-light: #253a5e;
+  --player: #2e7d32;
+  --player-light: #4caf50;
+  --rival: #b71c1c;
+  --rival-light: #e53935;
+  --neutral: #616161;
+  --neutral-light: #9e9e9e;
+  --parchment: #f5f0e1;
+  --parchment-dark: #e8dcc8;
+  --ink: #2c1810;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", "MS PMincho", serif;
+  background: var(--navy);
+  color: var(--ink);
+  min-height: 100vh;
+}
+
+/* ── Title Screen ─────────────────── */
+#title-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(180deg, var(--navy) 0%, #0d1520 100%);
+  color: var(--parchment);
+  text-align: center;
+  padding: 2rem;
+}
+
+#title-screen h1 {
+  font-size: 2.4rem;
+  color: var(--gold);
+  margin-bottom: 0.3rem;
+  letter-spacing: 0.15em;
+}
+
+#title-screen .subtitle {
+  font-size: 1rem;
+  color: var(--gold-dark);
+  margin-bottom: 2rem;
+}
+
+#title-screen .description {
+  max-width: 520px;
+  line-height: 1.8;
+  font-size: 0.95rem;
+  color: #b0a89a;
+  margin-bottom: 2.5rem;
+}
+
+#title-screen button {
+  font-family: inherit;
+  font-size: 1.1rem;
+  padding: 0.8rem 3rem;
+  background: var(--gold-dark);
+  color: var(--parchment);
+  border: 2px solid var(--gold);
+  cursor: pointer;
+  letter-spacing: 0.1em;
+  transition: all 0.2s;
+}
+
+#title-screen button:hover {
+  background: var(--gold);
+  color: var(--navy);
+}
+
+/* ── Game Screen ──────────────────── */
+#game-screen {
+  display: none;
+  min-height: 100vh;
+  background: var(--parchment);
+}
+
+/* ── Protocol Map (top bar) ───────── */
+.protocol-map {
+  background: var(--navy);
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  overflow-x: auto;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.round-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 60px;
+  position: relative;
+}
+
+.round-node .num {
+  font-size: 0.65rem;
+  color: #667;
+  margin-bottom: 2px;
+}
+
+.round-node .icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  border: 2px solid #445;
+  background: var(--navy-light);
+  color: #778;
+  transition: all 0.4s;
+}
+
+.round-node.lot .icon { }
+.round-node.election .icon { }
+
+.round-node.active .icon {
+  border-color: var(--gold);
+  background: var(--gold-dark);
+  color: var(--parchment);
+  box-shadow: 0 0 12px rgba(201, 168, 76, 0.5);
+  transform: scale(1.15);
+}
+
+.round-node.done .icon {
+  border-color: #556;
+  background: #334;
+  color: #99a;
+}
+
+.round-node .size {
+  font-size: 0.6rem;
+  color: #556;
+  margin-top: 2px;
+}
+
+.round-node.active .size { color: var(--gold); }
+
+.round-arrow {
+  color: #445;
+  font-size: 0.8rem;
+  margin: 0 2px;
+  padding-top: 6px;
+}
+
+.round-arrow.done { color: #556; }
+.round-arrow.active { color: var(--gold); }
+
+/* ── Gold bar ─────────────────────── */
+.gold-bar {
+  background: var(--parchment-dark);
+  padding: 0.6rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #d4c9b0;
+  font-size: 0.9rem;
+}
+
+.gold-bar .player-gold { color: var(--player); font-weight: bold; }
+.gold-bar .rival-gold { color: var(--rival); font-weight: bold; }
+
+/* ── Main content ─────────────────── */
+.game-main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+/* ── Round header ─────────────────── */
+.round-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.round-header h2 {
+  font-size: 1.4rem;
+  color: var(--navy);
+  margin-bottom: 0.3rem;
+}
+
+.round-header .round-type {
+  font-size: 1rem;
+  color: var(--gold-dark);
+}
+
+/* ── College display ──────────────── */
+.college-display {
+  background: white;
+  border: 1px solid #d4c9b0;
+  border-radius: 8px;
+  padding: 1.2rem;
+  margin-bottom: 1.5rem;
+}
+
+.college-display h3 {
+  font-size: 0.85rem;
+  color: #888;
+  margin-bottom: 0.8rem;
+}
+
+.college-bar {
+  height: 32px;
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  margin-bottom: 0.5rem;
+}
+
+.college-bar .seg-player {
+  background: var(--player-light);
+  transition: width 0.6s ease;
+}
+
+.college-bar .seg-neutral {
+  background: var(--neutral-light);
+  transition: width 0.6s ease;
+}
+
+.college-bar .seg-rival {
+  background: var(--rival-light);
+  transition: width 0.6s ease;
+}
+
+.college-legend {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 0.85rem;
+}
+
+.college-legend span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+/* ── Action panel ─────────────────── */
+.action-panel {
+  background: white;
+  border: 1px solid #d4c9b0;
+  border-radius: 8px;
+  padding: 1.2rem;
+  margin-bottom: 1.5rem;
+}
+
+.action-panel h3 {
+  font-size: 1rem;
+  color: var(--navy);
+  margin-bottom: 1rem;
+}
+
+.bribe-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.bribe-option {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.8rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.bribe-option:hover {
+  border-color: var(--gold);
+  background: #faf6eb;
+}
+
+.bribe-option.selected {
+  border-color: var(--gold);
+  background: #f5ecd3;
+}
+
+.bribe-option .opt-icon {
+  font-size: 1.3rem;
+  width: 36px;
+  text-align: center;
+}
+
+.bribe-option .opt-info {
+  flex: 1;
+}
+
+.bribe-option .opt-label {
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.bribe-option .opt-detail {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.bribe-slider-area {
+  display: none;
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #faf6eb;
+  border-radius: 6px;
+}
+
+.bribe-slider-area label {
+  display: block;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.bribe-slider-area input[type="range"] {
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+.bribe-slider-area .cost-preview {
+  font-size: 0.9rem;
+  color: var(--gold-dark);
+  font-weight: bold;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+
+.btn {
+  font-family: inherit;
+  font-size: 0.9rem;
+  padding: 0.6rem 1.5rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+}
+
+.btn-primary {
+  background: var(--gold-dark);
+  color: white;
+  border-color: var(--gold-dark);
+}
+
+.btn-primary:hover { background: var(--gold); color: var(--navy); }
+.btn:hover { border-color: #999; }
+
+.btn-skip {
+  background: #f5f5f5;
+  color: #666;
+}
+
+/* ── Log ──────────────────────────── */
+.event-log {
+  background: white;
+  border: 1px solid #d4c9b0;
+  border-radius: 8px;
+  padding: 1.2rem;
+  margin-bottom: 1.5rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.event-log h3 {
+  font-size: 0.85rem;
+  color: #888;
+  margin-bottom: 0.5rem;
+}
+
+.log-entry {
+  font-size: 0.85rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid #f0ebe0;
+  line-height: 1.5;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.log-entry:last-child { border-bottom: none; }
+
+/* ── Final screen ─────────────────── */
+#final-screen {
+  display: none;
+  min-height: 100vh;
+  background: linear-gradient(180deg, var(--navy) 0%, #0d1520 100%);
+  color: var(--parchment);
+  text-align: center;
+  padding: 3rem 2rem;
+}
+
+#final-screen h1 {
+  font-size: 2rem;
+  color: var(--gold);
+  margin-bottom: 1.5rem;
+}
+
+.final-votes {
+  max-width: 400px;
+  margin: 0 auto 2rem;
+}
+
+.vote-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.8rem;
+  gap: 0.8rem;
+}
+
+.vote-row .vr-name {
+  width: 120px;
+  text-align: right;
+  font-size: 0.9rem;
+}
+
+.vote-row .vr-bar-wrap {
+  flex: 1;
+  height: 24px;
+  background: #1a2744;
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.vote-row .vr-bar {
+  height: 100%;
+  transition: width 1.5s ease;
+  border-radius: 3px;
+}
+
+.vote-row .vr-count {
+  width: 30px;
+  text-align: left;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.threshold-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--gold);
+  z-index: 1;
+}
+
+.threshold-label {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--gold-dark);
+  margin-bottom: 2rem;
+}
+
+.final-message {
+  font-size: 1.2rem;
+  line-height: 1.8;
+  margin-bottom: 2rem;
+}
+
+.final-score {
+  margin-bottom: 2rem;
+}
+
+.final-score .score-total {
+  font-size: 1.5rem;
+  color: var(--gold);
+  margin-bottom: 0.6rem;
+}
+
+.score-breakdown {
+  display: inline-block;
+  text-align: left;
+  font-size: 0.85rem;
+  color: #a09880;
+  line-height: 1.8;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(201,168,76,0.2);
+  border-radius: 6px;
+  padding: 0.8rem 1.5rem;
+}
+
+.score-breakdown .sb-label {
+  color: #8a8070;
+}
+
+.score-breakdown .sb-value {
+  color: var(--gold);
+  font-weight: bold;
+  float: right;
+  margin-left: 2rem;
+}
+
+.score-breakdown .sb-divider {
+  border-top: 1px solid rgba(201,168,76,0.2);
+  margin: 0.3rem 0;
+}
+
+.score-breakdown .sb-total {
+  color: var(--gold);
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+/* ── Transition overlay ───────────── */
+#transition-overlay {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.8s ease;
+}
+
+#transition-overlay.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* ── Final screen staged fade-in ──── */
+#final-screen .fade-element {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+
+#final-screen .fade-element.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── History table ─────────────────── */
+.history-section {
+  max-width: 480px;
+  margin: 0 auto 2rem;
+  text-align: left;
+}
+
+.history-section h3 {
+  font-size: 0.9rem;
+  color: var(--gold-dark);
+  margin-bottom: 0.6rem;
+  text-align: center;
+}
+
+.history-summary {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: 0.8rem;
+  font-size: 0.85rem;
+  color: #a09880;
+}
+
+.history-summary b {
+  color: var(--gold);
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.history-table th {
+  color: #8a8070;
+  font-weight: normal;
+  text-align: left;
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid rgba(201,168,76,0.3);
+}
+
+.history-table td {
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  color: #b0a89a;
+}
+
+.history-table .result-win { color: var(--player-light); }
+.history-table .result-lose { color: var(--rival-light); }
+.history-table .result-draw { color: var(--gold); }
+.history-table .current-row td { color: var(--parchment); font-weight: bold; }
+
+#final-screen button {
+  font-family: inherit;
+  font-size: 1rem;
+  padding: 0.7rem 2.5rem;
+  background: var(--gold-dark);
+  color: var(--parchment);
+  border: 2px solid var(--gold);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+#final-screen button:hover {
+  background: var(--gold);
+  color: var(--navy);
+}
+
+/* ── Responsive ───────────────────── */
+@media (max-width: 600px) {
+  .protocol-map { padding: 0.6rem; }
+  .round-node { min-width: 42px; }
+  .round-node .icon { width: 28px; height: 28px; font-size: 0.8rem; }
+  .game-main { padding: 1rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ════ Title Screen ════ -->
+<div id="title-screen">
+  <h1>⚜ ヴェネツィア総督選挙 ⚜</h1>
+  <div class="subtitle">Anno Domini MCCLXVIII</div>
+  <div class="description">
+    あなたはヴェネツィアの野心的な貴族。<br>
+    買収と政治工作で自分の候補をドージェ（総督）に当選させよ。<br><br>
+    くじ引きと選挙を交互に繰り返す全10ラウンド。<br>
+    ただし金貨の無駄遣いは命取り——<br>
+    くじ引きラウンドで買収した委員が落ちることもある。
+  </div>
+  <button onclick="startGame()">選挙を始める</button>
+</div>
+
+<!-- ════ Game Screen ════ -->
+<div id="game-screen">
+  <!-- Protocol map -->
+  <div class="protocol-map" id="protocol-map"></div>
+
+  <!-- Gold bar -->
+  <div class="gold-bar">
+    <span>⚜ <span id="player-name" style="font-weight:bold"></span> <small style="color:#999">（あなた）</small> 💰 <span class="player-gold" id="player-gold">100枚</span></span>
+    <span>🕵 <span id="rival-name" style="font-weight:bold"></span> 💰 <span class="rival-gold" id="rival-gold">100枚</span></span>
+  </div>
+
+  <div class="game-main">
+    <div class="round-header" id="round-header">
+      <h2></h2>
+      <div class="round-type"></div>
+    </div>
+
+    <div class="college-display" id="college-display">
+      <h3>現在の委員会</h3>
+      <div class="college-bar" id="college-bar"></div>
+      <div class="college-legend">
+        <span><span class="legend-dot" style="background:var(--player-light)"></span> 味方 <b id="count-player">0</b></span>
+        <span><span class="legend-dot" style="background:var(--neutral-light)"></span> 中立 <b id="count-neutral">0</b></span>
+        <span><span class="legend-dot" style="background:var(--rival-light)"></span> 敵 <b id="count-rival">0</b></span>
+      </div>
+    </div>
+
+    <div class="action-panel" id="action-panel" style="display:none"></div>
+
+    <div class="event-log">
+      <h3>📜 記録</h3>
+      <div id="log-entries"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ Transition Overlay ════ -->
+<div id="transition-overlay"></div>
+
+<!-- ════ Final Screen ════ -->
+<div id="final-screen">
+  <h1 id="final-title" class="fade-element"></h1>
+  <div class="final-votes fade-element" id="final-votes"></div>
+  <div class="threshold-label fade-element" id="threshold-label"></div>
+  <div class="final-message fade-element" id="final-message"></div>
+  <div class="final-score fade-element" id="final-score"></div>
+  <div class="history-section fade-element" id="history-section"></div>
+  <button class="fade-element" onclick="restartGame()">もう一度遊ぶ</button>
+</div>
+
+<script>
+// ── Protocol Definition ──────────────────────────────
+const PROTOCOL = [
+  { type: "lot",      size: 480, approvals: null, next: 30 },
+  { type: "lot",      size: 30,  approvals: null, next: 9  },
+  { type: "election", size: 9,   approvals: 7,    next: 40 },
+  { type: "lot",      size: 40,  approvals: null, next: 12 },
+  { type: "election", size: 12,  approvals: 9,    next: 25 },
+  { type: "lot",      size: 25,  approvals: null, next: 9  },
+  { type: "election", size: 9,   approvals: 7,    next: 45 },
+  { type: "lot",      size: 45,  approvals: null, next: 11 },
+  { type: "election", size: 11,  approvals: 9,    next: 41 },
+  { type: "election", size: 41,  approvals: 25,   next: 1  },
+];
+
+const FAMILIES = [
+  "コンタリーニ","モロジーニ","ダンドロ","ファリエル","グラデニーゴ",
+  "ティエポロ","ズィアーニ","ミキエル","バルバリーゴ","グリマーニ",
+  "ロレダン","フォスカリ","モチェニーゴ","マリピエロ","ヴェンドラミン",
+  "トレヴィザン","プリウリ","ドナ","グリッティ","ヴェニエル",
+  "コルネール","ベンボ","ピザーニ","バドエル","クエリーニ",
+  "ゼン","モーロ","ステーノ","チェルシ","ドルフィン",
+  "マルチェッロ","ジュスティニアン","ソランツォ","ヴァリエル","サグレード",
+  "エリッツォ","ディエド","ロンゴ","ブラガディン","カッペッロ",
+  "メンモ","オルセオロ","セルヴォ","バゼッジョ",
+];
+
+// ── History (localStorage) ───────────────────────────
+function loadHistory() {
+  try {
+    return JSON.parse(localStorage.getItem("doge_history") || "[]");
+  } catch { return []; }
+}
+
+function saveResult(result, score, playerFamily, rivalFamily, pv, rv) {
+  const history = loadHistory();
+  history.push({
+    date: new Date().toLocaleDateString("ja-JP"),
+    result,  // "win" | "lose" | "draw"
+    score,
+    player: playerFamily,
+    rival: rivalFamily,
+    pv, rv,
+  });
+  // Keep last 50
+  if (history.length > 50) history.splice(0, history.length - 50);
+  localStorage.setItem("doge_history", JSON.stringify(history));
+}
+
+function renderHistory(currentResult, currentScore) {
+  const history = loadHistory();
+  const section = document.getElementById("history-section");
+
+  if (history.length === 0) {
+    section.innerHTML = "";
+    return;
+  }
+
+  const wins = history.filter(h => h.result === "win").length;
+  const losses = history.filter(h => h.result === "lose").length;
+  const draws = history.filter(h => h.result === "draw").length;
+  const totalScore = history.reduce((s, h) => s + h.score, 0);
+  const bestScore = Math.max(...history.map(h => h.score));
+
+  // Show last 5 games (most recent first)
+  const recent = [...history].reverse().slice(0, 5);
+  const resultLabel = { win: "勝利", lose: "敗北", draw: "引分" };
+  const resultClass = { win: "result-win", lose: "result-lose", draw: "result-draw" };
+
+  let rowsHtml = recent.map((h, i) => {
+    const isCurrent = (i === 0);
+    return `<tr class="${isCurrent ? "current-row" : ""}">
+      <td>${h.date}</td>
+      <td>${h.player}家</td>
+      <td class="${resultClass[h.result]}">${resultLabel[h.result]}</td>
+      <td style="text-align:right">${h.score}</td>
+    </tr>`;
+  }).join("");
+
+  section.innerHTML = `
+    <h3>📊 戦績</h3>
+    <div class="history-summary">
+      <span>通算 <b>${history.length}</b>戦</span>
+      <span><b style="color:var(--player-light)">${wins}</b>勝</span>
+      <span><b style="color:var(--rival-light)">${losses}</b>敗</span>
+      <span><b style="color:var(--gold)">${draws}</b>分</span>
+    </div>
+    <div class="history-summary">
+      <span>累計スコア: <b>${totalScore}</b></span>
+      <span>最高スコア: <b>${bestScore}</b></span>
+    </div>
+    <table class="history-table">
+      <tr><th>日付</th><th>候補</th><th>結果</th><th style="text-align:right">スコア</th></tr>
+      ${rowsHtml}
+    </table>`;
+}
+
+// ── Game State ───────────────────────────────────────
+let state = {};
+
+function initState() {
+  const oligarchs = [];
+  const fams = [];
+  for (let k = 0; k < Math.ceil(480 / FAMILIES.length); k++) fams.push(...FAMILIES);
+  shuffle(fams);
+
+  for (let i = 0; i < 480; i++) {
+    const loyalty = clamp(gaussRandom(0, 0.4), -1, 1);
+    const resist = randInt(4, 12);
+    oligarchs.push({ id: i, family: fams[i], loyalty, resist });
+  }
+
+  const best = oligarchs.reduce((a, b) => a.loyalty > b.loyalty ? a : b);
+  const worst = oligarchs.reduce((a, b) => a.loyalty < b.loyalty ? a : b);
+
+  state = {
+    oligarchs,
+    college: oligarchs.map((_, i) => i),
+    playerGold: 100,
+    rivalGold: 100,
+    playerCandidate: best.family,
+    rivalCandidate: worst.family,
+    round: 0,
+    logEntries: [],
+  };
+}
+
+// ── Utility ──────────────────────────────────────────
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function randInt(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
+function gaussRandom(mean, sd) {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  return mean + sd * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+function sample(arr, n) { return shuffle([...arr]).slice(0, n); }
+
+function countFactions(ids) {
+  let y = 0, r = 0;
+  for (const i of ids) {
+    if (state.oligarchs[i].loyalty > 0.3) y++;
+    else if (state.oligarchs[i].loyalty < -0.3) r++;
+  }
+  return { player: y, rival: r, neutral: ids.length - y - r };
+}
+
+// ── UI Helpers ───────────────────────────────────────
+function log(msg) {
+  state.logEntries.unshift(msg);
+  renderLog();
+}
+
+function renderLog() {
+  const el = document.getElementById("log-entries");
+  el.innerHTML = state.logEntries.slice(0, 20)
+    .map(m => `<div class="log-entry">${m}</div>`).join("");
+}
+
+function updateGoldBar() {
+  document.getElementById("player-name").textContent = `${state.playerCandidate}家`;
+  document.getElementById("rival-name").textContent = `${state.rivalCandidate}家`;
+  document.getElementById("player-gold").textContent = `${state.playerGold}枚`;
+  document.getElementById("rival-gold").textContent = `${state.rivalGold}枚`;
+}
+
+function updateCollegeDisplay() {
+  const c = countFactions(state.college);
+  const total = state.college.length || 1;
+  const bar = document.getElementById("college-bar");
+  bar.innerHTML = `
+    <div class="seg-player" style="width:${(c.player/total*100).toFixed(1)}%"></div>
+    <div class="seg-neutral" style="width:${(c.neutral/total*100).toFixed(1)}%"></div>
+    <div class="seg-rival" style="width:${(c.rival/total*100).toFixed(1)}%"></div>`;
+  document.getElementById("count-player").textContent = c.player;
+  document.getElementById("count-neutral").textContent = c.neutral;
+  document.getElementById("count-rival").textContent = c.rival;
+}
+
+function buildProtocolMap() {
+  const map = document.getElementById("protocol-map");
+  map.innerHTML = "";
+  PROTOCOL.forEach((r, i) => {
+    if (i > 0) {
+      const arrow = document.createElement("div");
+      arrow.className = "round-arrow";
+      arrow.id = `arrow-${i}`;
+      arrow.textContent = "→";
+      map.appendChild(arrow);
+    }
+    const node = document.createElement("div");
+    node.className = `round-node ${r.type}`;
+    node.id = `rnode-${i}`;
+    const icon = r.type === "lot" ? "🎲" : (i === 9 ? "👑" : "🗳");
+    const sizeLabel = r.type === "lot" ? `${r.size}→${r.next}` : `${r.size}→${r.next === 1 ? "👑" : r.next}`;
+    node.innerHTML = `
+      <div class="num">第${i+1}回</div>
+      <div class="icon">${icon}</div>
+      <div class="size">${sizeLabel}</div>`;
+    map.appendChild(node);
+  });
+}
+
+function updateProtocolMap() {
+  PROTOCOL.forEach((_, i) => {
+    const node = document.getElementById(`rnode-${i}`);
+    node.classList.remove("active", "done");
+    if (i < state.round) node.classList.add("done");
+    else if (i === state.round) node.classList.add("active");
+
+    if (i > 0) {
+      const arrow = document.getElementById(`arrow-${i}`);
+      arrow.classList.remove("active", "done");
+      if (i < state.round) arrow.classList.add("done");
+      else if (i === state.round) arrow.classList.add("active");
+    }
+  });
+}
+
+// ── Game Logic ───────────────────────────────────────
+function startGame() {
+  initState();
+  document.getElementById("title-screen").style.display = "none";
+  document.getElementById("game-screen").style.display = "block";
+  document.getElementById("final-screen").style.display = "none";
+  buildProtocolMap();
+  state.logEntries = [];
+  log(`⚜ ${state.playerCandidate}家 vs ${state.rivalCandidate}家 — 選挙開始`);
+  runRound();
+}
+
+function restartGame() {
+  document.getElementById("final-screen").style.display = "none";
+  document.getElementById("title-screen").style.display = "flex";
+}
+
+function runRound() {
+  if (state.round >= 10) return;
+  const r = PROTOCOL[state.round];
+  const roundNum = state.round + 1;
+
+  updateProtocolMap();
+  updateGoldBar();
+  updateCollegeDisplay();
+
+  const header = document.getElementById("round-header");
+  if (r.type === "lot") {
+    header.querySelector("h2").textContent = `第${roundNum}回 — くじ引き`;
+    header.querySelector(".round-type").textContent = `🎲 ${r.size}名から${r.next}名を抽選`;
+    showLotRound(r);
+  } else if (state.round === 9) {
+    header.querySelector("h2").textContent = `第${roundNum}回 — ドージェ最終選挙`;
+    header.querySelector(".round-type").textContent = `👑 41名から25票の承認で当選`;
+    showElectionRound(r, true);
+  } else {
+    header.querySelector("h2").textContent = `第${roundNum}回 — 選挙`;
+    header.querySelector(".round-type").textContent = `🗳 ${r.size}名が${r.next}名を選出（承認${r.approvals}票）`;
+    showElectionRound(r, false);
+  }
+}
+
+function showLotRound(r) {
+  const panel = document.getElementById("action-panel");
+  panel.style.display = "block";
+  panel.innerHTML = `
+    <h3>🎲 くじ引き</h3>
+    <p style="margin-bottom:1rem;color:#666;font-size:0.9rem">
+      運命の壺から${r.next}名が選ばれる。買収の余地はない。
+    </p>
+    <button class="btn btn-primary" onclick="executeLot()">くじを引く</button>`;
+}
+
+function executeLot() {
+  const r = PROTOCOL[state.round];
+  const before = countFactions(state.college);
+  state.college = sample(state.college, r.next);
+  const after = countFactions(state.college);
+
+  log(`🎲 第${state.round+1}回: ${r.size}名→${r.next}名（味方${after.player} / 中立${after.neutral} / 敵${after.rival}）`);
+
+  const pRatioBefore = before.player / (before.player + before.rival + before.neutral || 1);
+  const pRatioAfter = after.player / (r.next || 1);
+  if (pRatioAfter > pRatioBefore + 0.05) {
+    log("→ 運命の女神が微笑んだ！");
+  } else if (pRatioAfter < pRatioBefore - 0.05) {
+    log("→ 不運……");
+  }
+
+  updateCollegeDisplay();
+  const panel = document.getElementById("action-panel");
+  panel.innerHTML = `
+    <h3>✓ くじ引き完了</h3>
+    <p style="color:#666;font-size:0.9rem;margin-bottom:1rem">
+      ${r.next}名の新委員会が決まった。
+    </p>
+    <button class="btn btn-primary" onclick="nextRound()">次のラウンドへ</button>`;
+}
+
+function showElectionRound(r, isFinal) {
+  const c = countFactions(state.college);
+  const bribableN = state.college.filter(i => {
+    const l = state.oligarchs[i].loyalty;
+    return l >= -0.3 && l <= 0.3;
+  });
+  const bribableR = state.college.filter(i => state.oligarchs[i].loyalty < -0.3);
+
+  const canBribe = state.playerGold > 0 && (bribableN.length > 0 || bribableR.length > 0);
+
+  const avgN = bribableN.length > 0
+    ? Math.round(bribableN.reduce((s, i) => s + state.oligarchs[i].resist, 0) / bribableN.length)
+    : 0;
+  const avgR = bribableR.length > 0
+    ? Math.round(bribableR.reduce((s, i) => s + state.oligarchs[i].resist * 2, 0) / bribableR.length)
+    : 0;
+
+  const panel = document.getElementById("action-panel");
+  panel.style.display = "block";
+
+  if (!canBribe) {
+    panel.innerHTML = `
+      <h3>🗳 選挙</h3>
+      <p style="color:#666;font-size:0.9rem;margin-bottom:1rem">買収可能な委員がいません。</p>
+      <button class="btn btn-primary" onclick="executeElection(${isFinal})">投票を実施</button>`;
+    return;
+  }
+
+  // Store bribable info for slider
+  window._bribeState = { bribableN, bribableR, avgN, avgR, isFinal };
+
+  let optionsHtml = "";
+  if (bribableN.length > 0) {
+    const maxN = calcMaxAffordable(bribableN, 1);
+    optionsHtml += `
+      <div class="bribe-option" onclick="selectBribeTarget('N')">
+        <div class="opt-icon">🤝</div>
+        <div class="opt-info">
+          <div class="opt-label">中立派を買収</div>
+          <div class="opt-detail">${bribableN.length}名, 平均 ~${avgN}枚/人（最大${maxN}名）</div>
+        </div>
+      </div>`;
+  }
+  if (bribableR.length > 0) {
+    const maxR = calcMaxAffordable(bribableR, 2);
+    optionsHtml += `
+      <div class="bribe-option" onclick="selectBribeTarget('R')">
+        <div class="opt-icon">💰</div>
+        <div class="opt-info">
+          <div class="opt-label">敵派閥を買収</div>
+          <div class="opt-detail">${bribableR.length}名, 平均 ~${avgR}枚/人（最大${maxR}名）</div>
+        </div>
+      </div>`;
+  }
+
+  panel.innerHTML = `
+    <h3>💰 買収フェーズ（所持金: ${state.playerGold}枚）</h3>
+    <div class="bribe-options">${optionsHtml}</div>
+    <div class="bribe-slider-area" id="bribe-slider-area"></div>
+    <div class="action-buttons">
+      <button class="btn btn-skip" onclick="skipBribeAndVote(${isFinal})">見送って投票へ</button>
+    </div>`;
+}
+
+function calcMaxAffordable(ids, mult) {
+  const sorted = [...ids].sort((a, b) => state.oligarchs[a].resist - state.oligarchs[b].resist);
+  let gold = state.playerGold;
+  let count = 0;
+  for (const i of sorted) {
+    const cost = state.oligarchs[i].resist * mult;
+    if (gold >= cost) { gold -= cost; count++; } else break;
+  }
+  return count;
+}
+
+function calcCost(ids, mult, count) {
+  const sorted = [...ids].sort((a, b) => state.oligarchs[a].resist - state.oligarchs[b].resist);
+  let total = 0;
+  for (let k = 0; k < count; k++) total += state.oligarchs[sorted[k]].resist * mult;
+  return total;
+}
+
+function selectBribeTarget(target) {
+  const bs = window._bribeState;
+  const ids = target === "N" ? bs.bribableN : bs.bribableR;
+  const mult = target === "N" ? 1 : 2;
+  const max = calcMaxAffordable(ids, mult);
+  if (max === 0) return;
+
+  const area = document.getElementById("bribe-slider-area");
+  const initCost = calcCost(ids, mult, 1);
+  area.style.display = "block";
+  area.innerHTML = `
+    <label>買収人数: <b id="bribe-count">1</b>名</label>
+    <input type="range" min="0" max="${max}" value="1" id="bribe-range"
+      oninput="updateBribePreview('${target}')">
+    <div class="cost-preview" id="bribe-cost">費用: ${initCost}枚（残り${state.playerGold - initCost}枚）</div>
+    <div class="action-buttons" style="margin-top:0.8rem">
+      <button class="btn btn-primary" id="bribe-exec-btn" onclick="executeBribe('${target}')">買収する</button>
+      <button class="btn btn-skip" onclick="skipBribeAndVote(${bs.isFinal})">見送って投票へ</button>
+    </div>`;
+
+  // highlight
+  document.querySelectorAll(".bribe-option").forEach(el => el.classList.remove("selected"));
+  event.currentTarget.classList.add("selected");
+}
+
+function updateBribePreview(target) {
+  const bs = window._bribeState;
+  const ids = target === "N" ? bs.bribableN : bs.bribableR;
+  const mult = target === "N" ? 1 : 2;
+  const count = parseInt(document.getElementById("bribe-range").value);
+  document.getElementById("bribe-count").textContent = count;
+  if (count === 0) {
+    document.getElementById("bribe-cost").textContent = "見送り";
+    document.getElementById("bribe-exec-btn").textContent = "見送る";
+  } else {
+    const cost = calcCost(ids, mult, count);
+    document.getElementById("bribe-cost").textContent = `費用: ${cost}枚（残り${state.playerGold - cost}枚）`;
+    document.getElementById("bribe-exec-btn").textContent = "買収する";
+  }
+}
+
+function executeBribe(target) {
+  const bs = window._bribeState;
+  const count = parseInt(document.getElementById("bribe-range").value);
+  if (count === 0) { skipBribeAndVote(bs.isFinal); return; }
+
+  const ids = target === "N" ? bs.bribableN : bs.bribableR;
+  const mult = target === "N" ? 1 : 2;
+  const sorted = [...ids].sort((a, b) => state.oligarchs[a].resist - state.oligarchs[b].resist);
+  let totalCost = 0;
+  for (let k = 0; k < count; k++) {
+    const o = state.oligarchs[sorted[k]];
+    totalCost += o.resist * mult;
+    o.loyalty = Math.min(1.0, o.loyalty + 0.7);
+  }
+  state.playerGold -= totalCost;
+  const label = target === "N" ? "中立派" : "敵派閥";
+  log(`💰 ${label}${count}名を買収（${totalCost}枚消費）`);
+
+  updateGoldBar();
+  updateCollegeDisplay();
+
+  // Rival AI bribe
+  rivalBribe();
+
+  executeElection(bs.isFinal);
+}
+
+function skipBribeAndVote(isFinal) {
+  rivalBribe();
+  executeElection(isFinal);
+}
+
+function rivalBribe() {
+  const roundNum = state.round + 1;
+  const bribable = state.college.filter(i => state.oligarchs[i].loyalty >= -0.3);
+  if (bribable.length === 0 || state.rivalGold <= 0) return;
+
+  const aggression = 0.15 + 0.05 * roundNum;
+  const budget = Math.min(Math.floor(state.rivalGold * aggression), state.rivalGold);
+
+  const neutrals = bribable
+    .filter(i => state.oligarchs[i].loyalty >= -0.3 && state.oligarchs[i].loyalty <= 0.3)
+    .sort((a, b) => state.oligarchs[a].resist - state.oligarchs[b].resist);
+
+  let spent = 0, count = 0;
+  for (const i of neutrals) {
+    const cost = state.oligarchs[i].resist;
+    if (spent + cost > budget) break;
+    state.oligarchs[i].loyalty = Math.max(-1.0, state.oligarchs[i].loyalty - 0.7);
+    spent += cost;
+    count++;
+  }
+  state.rivalGold -= spent;
+  if (count > 0) {
+    log(`🕵 敵が${count}名を買収した……（${spent}枚消費）`);
+  }
+  updateGoldBar();
+  updateCollegeDisplay();
+}
+
+function executeElection(isFinal) {
+  const r = PROTOCOL[state.round];
+  let playerVotes = 0, rivalVotes = 0;
+  for (const idx of state.college) {
+    const prob = (state.oligarchs[idx].loyalty + 1) / 2;
+    if (Math.random() < prob) playerVotes++;
+    else rivalVotes++;
+  }
+
+  const total = state.college.length;
+  log(`🗳 第${state.round+1}回投票: 味方${playerVotes} / 敵${rivalVotes}（全${total}票）`);
+
+  if (isFinal) {
+    showFinalResult(playerVotes, rivalVotes, r.approvals);
+    return;
+  }
+
+  const playerRatio = playerVotes / (total || 1);
+  let targetYours;
+  if (playerVotes >= r.approvals) {
+    const boost = Math.min(1.3, 1.0 + (playerVotes - r.approvals) / total);
+    targetYours = Math.round(r.next * playerRatio * boost);
+    log("→ あなたの派閥が選挙を支配した！");
+  } else if (rivalVotes >= r.approvals) {
+    const suppress = Math.max(0.7, 1.0 - (rivalVotes - r.approvals) / total);
+    targetYours = Math.round(r.next * playerRatio * suppress);
+    log("→ 敵派閥が選挙を支配した！");
+  } else {
+    targetYours = Math.round(r.next * playerRatio);
+    log("→ どちらも過半数に届かず。比例配分。");
+  }
+
+  targetYours = clamp(targetYours + randInt(-1, 1), 0, r.next);
+
+  const poolY = shuffle([...Array(480).keys()].filter(i => state.oligarchs[i].loyalty > 0.3));
+  const poolR = shuffle([...Array(480).keys()].filter(i => state.oligarchs[i].loyalty < -0.3));
+  const poolN = shuffle([...Array(480).keys()].filter(i => state.oligarchs[i].loyalty >= -0.3 && state.oligarchs[i].loyalty <= 0.3));
+
+  const newCollege = new Set();
+  for (const i of poolY) { if (newCollege.size >= targetYours) break; newCollege.add(i); }
+  for (const i of poolR) { if (newCollege.size >= r.next) break; newCollege.add(i); }
+  for (const i of poolN) { if (newCollege.size >= r.next) break; newCollege.add(i); }
+  // fallback
+  if (newCollege.size < r.next) {
+    for (let i = 0; i < 480 && newCollege.size < r.next; i++) newCollege.add(i);
+  }
+
+  state.college = [...newCollege].slice(0, r.next);
+  const nc = countFactions(state.college);
+  log(`📋 新委員会（${r.next}名）: 味方${nc.player} / 中立${nc.neutral} / 敵${nc.rival}`);
+
+  updateCollegeDisplay();
+  const panel = document.getElementById("action-panel");
+  panel.innerHTML = `
+    <h3>✓ 選挙完了</h3>
+    <button class="btn btn-primary" onclick="nextRound()">次のラウンドへ</button>`;
+}
+
+function nextRound() {
+  state.round++;
+  if (state.round >= 10) return;
+  runRound();
+}
+
+// ── Final Result ─────────────────────────────────────
+function showFinalResult(pv, rv, threshold) {
+  // Reset fade elements
+  document.querySelectorAll("#final-screen .fade-element").forEach(el => {
+    el.classList.remove("visible");
+  });
+
+  // Phase 1: Fade game screen to black
+  const overlay = document.getElementById("transition-overlay");
+  overlay.classList.add("visible");
+
+  setTimeout(() => {
+    // Phase 2: Switch screens while black
+    document.getElementById("game-screen").style.display = "none";
+    const fs = document.getElementById("final-screen");
+    fs.style.display = "block";
+
+    // Populate content while hidden
+    populateFinalScreen(pv, rv, threshold);
+
+    // Phase 3: Fade from black
+    setTimeout(() => {
+      overlay.classList.remove("visible");
+
+      // Phase 4: Stagger fade-in of each element
+      const elements = document.querySelectorAll("#final-screen .fade-element");
+      elements.forEach((el, i) => {
+        setTimeout(() => el.classList.add("visible"), 400 + i * 500);
+      });
+
+      // Phase 5: Animate vote bars after they become visible
+      setTimeout(() => {
+        document.getElementById("pv-bar").style.width =
+          `${(pv / 41 * 100).toFixed(1)}%`;
+        document.getElementById("rv-bar").style.width =
+          `${(rv / 41 * 100).toFixed(1)}%`;
+      }, 400 + 1 * 500 + 300);
+    }, 600);
+  }, 900);
+}
+
+function populateFinalScreen(pv, rv, threshold) {
+  const isWin = pv >= threshold && pv > rv;
+  const isLose = rv >= threshold && rv >= pv;
+
+  document.getElementById("final-title").textContent =
+    isWin ? "🎉 勝利" : isLose ? "💀 敗北" : "⚖ 膠着";
+
+  const maxVotes = 41;
+  const threshPct = (threshold / maxVotes * 100).toFixed(1);
+
+  document.getElementById("final-votes").innerHTML = `
+    <div class="vote-row">
+      <div class="vr-name">${state.playerCandidate}家</div>
+      <div class="vr-bar-wrap">
+        <div class="threshold-line" style="left:${threshPct}%"></div>
+        <div class="vr-bar" style="width:0%;background:var(--player-light)" id="pv-bar"></div>
+      </div>
+      <div class="vr-count" style="color:var(--player-light)">${pv}</div>
+    </div>
+    <div class="vote-row">
+      <div class="vr-name">${state.rivalCandidate}家</div>
+      <div class="vr-bar-wrap">
+        <div class="threshold-line" style="left:${threshPct}%"></div>
+        <div class="vr-bar" style="width:0%;background:var(--rival-light)" id="rv-bar"></div>
+      </div>
+      <div class="vr-count" style="color:var(--rival-light)">${rv}</div>
+    </div>`;
+
+  document.getElementById("threshold-label").textContent = `当選ライン: ${threshold}票 / 41票`;
+
+  const goldSpent = 100 - state.playerGold;
+  const scoreEl = document.getElementById("final-score");
+
+  if (isWin) {
+    document.getElementById("final-message").innerHTML =
+      `${state.playerCandidate}家が新たなドージェに選出された。<br>サン・マルコの鐘がラグーナに鳴り響く！`;
+    const victoryBonus = 1000;
+    const goldBonus = state.playerGold * 10;
+    const total = victoryBonus + goldBonus;
+    scoreEl.innerHTML = `
+      <div class="score-total">🏆 スコア: ${total}</div>
+      <div class="score-breakdown">
+        <div><span class="sb-label">勝利ボーナス</span><span class="sb-value">+${victoryBonus}</span></div>
+        <div><span class="sb-label">残り金貨 (${state.playerGold}枚 × 10)</span><span class="sb-value">+${goldBonus}</span></div>
+        <div class="sb-divider"></div>
+        <div><span class="sb-label">使った金貨</span><span class="sb-value" style="color:#a09880">${goldSpent}枚</span></div>
+        <div><span class="sb-label">敵の残り金貨</span><span class="sb-value" style="color:#a09880">${state.rivalGold}枚</span></div>
+        <div class="sb-divider"></div>
+        <div class="sb-total">合計<span class="sb-value">${total}</span></div>
+      </div>`;
+  } else if (isLose) {
+    document.getElementById("final-message").innerHTML =
+      `${state.rivalCandidate}家がドージェの座を手にした。<br>あなたの派閥はパラッツォへと退く……`;
+    scoreEl.innerHTML = `
+      <div class="score-total">スコア: 0</div>
+      <div class="score-breakdown">
+        <div><span class="sb-label">勝利ボーナス</span><span class="sb-value" style="color:#666">+0</span></div>
+        <div><span class="sb-label">残り金貨</span><span class="sb-value" style="color:#666">${state.playerGold}枚（敗北のため無効）</span></div>
+        <div class="sb-divider"></div>
+        <div><span class="sb-label">使った金貨</span><span class="sb-value" style="color:#a09880">${goldSpent}枚</span></div>
+        <div><span class="sb-label">敵の残り金貨</span><span class="sb-value" style="color:#a09880">${state.rivalGold}枚</span></div>
+        <div class="sb-divider"></div>
+        <div class="sb-total">合計<span class="sb-value">0</span></div>
+      </div>`;
+  } else {
+    document.getElementById("final-message").innerHTML =
+      `どの候補も${threshold}票に届かなかった。<br>選挙は振り出しに戻る。`;
+    const drawBonus = state.playerGold * 5;
+    scoreEl.innerHTML = `
+      <div class="score-total">⚖ スコア: ${drawBonus}</div>
+      <div class="score-breakdown">
+        <div><span class="sb-label">勝利ボーナス</span><span class="sb-value" style="color:#666">+0（引き分け）</span></div>
+        <div><span class="sb-label">残り金貨 (${state.playerGold}枚 × 5)</span><span class="sb-value">+${drawBonus}</span></div>
+        <div class="sb-divider"></div>
+        <div><span class="sb-label">使った金貨</span><span class="sb-value" style="color:#a09880">${goldSpent}枚</span></div>
+        <div><span class="sb-label">敵の残り金貨</span><span class="sb-value" style="color:#a09880">${state.rivalGold}枚</span></div>
+        <div class="sb-divider"></div>
+        <div class="sb-total">合計<span class="sb-value">${drawBonus}</span></div>
+      </div>`;
+  }
+
+  // Save & render history
+  const result = isWin ? "win" : isLose ? "lose" : "draw";
+  const finalScore = isWin ? (1000 + state.playerGold * 10) : isLose ? 0 : (state.playerGold * 5);
+  saveResult(result, finalScore, state.playerCandidate, state.rivalCandidate, pv, rv);
+  renderHistory(result, finalScore);
+}
+</script>
+</body>
+</html>
